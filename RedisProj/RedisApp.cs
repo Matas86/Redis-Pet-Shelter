@@ -133,6 +133,11 @@ namespace RedisProj
 
         public void SeePets()
         {
+            if (db.StringGet("petcount") == "0")
+            {
+                Console.WriteLine("There are currently no pets listed.");
+                return;
+            }
             string count = db.StringGet("petcount");
 
             for (int i = 1; i <= int.Parse(count); i++)
@@ -143,40 +148,49 @@ namespace RedisProj
                 {
                     Console.WriteLine(string.Format("{0} - {1}", item.Name, item.Value));
                 }
-            } 
+            }
         }
 
         public void AddPet()
         {
-            Console.WriteLine("Enter your pets name.");
-            string petname = Console.ReadLine();
-            Console.WriteLine("Enter your pets type.");
-            string petstype = Console.ReadLine();
-            Console.WriteLine("Is your pet available for pick-up? (Yes/No).");
-            string petsavailb = Console.ReadLine();
-            Console.WriteLine("In what shelter are you placing your pet?");
-            string petShelter = Console.ReadLine();
+            if (LoggedUser != null)
+            {
+                Console.WriteLine("Enter your pets name.");
+                string petname = Console.ReadLine();
+                Console.WriteLine("Enter your pets type.");
+                string petstype = Console.ReadLine();
+                Console.WriteLine("Is your pet available for pick-up? (Yes/No).");
+                string petsavailb = Console.ReadLine();
+                Console.WriteLine("In what shelter are you placing your pet?");
+                string petShelter = Console.ReadLine();
 
 
-            db.StringIncrement("petcount");
-            string count = db.StringGet("petcount");
-            var tran = db.CreateTransaction();
-            tran.AddCondition(Condition.HashNotExists("pets:" + count, "petname"));
-            HashEntry[] petFormat = { new HashEntry("petname", petname), new HashEntry("petstype", petstype), new HashEntry("petsAvailability", petsavailb), new HashEntry("Shelter", petShelter )};
-            tran.HashSetAsync("pets:" + count, petFormat);
-            tran.StringSetAsync(petname, count);
-            bool committed = tran.Execute();
-            if (committed) Console.WriteLine("Pet was added successfully.");
-            else Console.WriteLine("Pet was already added previously.");
+                db.StringIncrement("petcount");
+                string count = db.StringGet("petcount");
+                var tran = db.CreateTransaction();
+                tran.AddCondition(Condition.HashNotExists("pets:" + count, "petname"));
+                HashEntry[] petFormat = { new HashEntry("petname", petname), new HashEntry("petstype", petstype), new HashEntry("petsAvailability", petsavailb), new HashEntry("Shelter", petShelter) };
+                tran.HashSetAsync("pets:" + count, petFormat);
+                tran.StringSetAsync(petname, count);
+                bool committed = tran.Execute();
+                if (committed) Console.WriteLine("Pet was added successfully.");
+                else Console.WriteLine("Pet was already added previously.");
+            }
+            else Console.WriteLine("You are not logged in.");
         }
 
         public void SeeAvailbPets()
         {
+            if (db.StringGet("petcount") == "0")
+            {
+                Console.WriteLine("There are currently no pets listed.");
+                return;
+            }
             string count = db.StringGet("petcount");
 
             for (int i = 1; i <= int.Parse(count); i++)
             {
-                
+
                 var pet = db.HashGetAll("pets:" + i);
                 HashEntry entry = new HashEntry("petsAvailability", "Yes");
 
@@ -188,34 +202,43 @@ namespace RedisProj
                             Console.WriteLine(string.Format("{0} - {1}", items.Name, items.Value));
                         Console.WriteLine("\n");
                     }
-                    
+
                 }
             }
         }
 
         public void TakePet()
         {
-            Console.WriteLine("Enter your pets name.");
-            string petname = Console.ReadLine();
-            Console.WriteLine("Enter your pets type.");
-            string petstype = Console.ReadLine();
-            Console.WriteLine("In what shelter is the pet located right now?");
-            string petShelter = Console.ReadLine();
+            if (LoggedUser != null)
+            {
+                Console.WriteLine("Enter your pets name.");
+                string petname = Console.ReadLine();
+                Console.WriteLine("Enter your pets type.");
+                string petstype = Console.ReadLine();
+                Console.WriteLine("In what shelter is the pet located right now?");
+                string petShelter = Console.ReadLine();
 
-            var id = db.StringGet(petname);
-            var tran = db.CreateTransaction();
-            tran.AddCondition(Condition.HashEqual("pets:" + id, "Shelter", petShelter));
-            HashEntry[] petFormat = { new HashEntry("petname", petname), new HashEntry("petstype", petstype), new HashEntry("petsAvailability", "No"), new HashEntry("Shelter", "New Owner: "+LoggedUser) };
-            tran.HashSetAsync("pets:" + id, petFormat);
-            bool committed = tran.Execute();
-            if (committed) Console.WriteLine("Pet was taken successfully.");
-            else Console.WriteLine("Something went wrong.");
-
+                var id = db.StringGet(petname);
+                var tran = db.CreateTransaction();
+                tran.AddCondition(Condition.HashEqual("pets:" + id, "Shelter", petShelter));
+                tran.AddCondition(Condition.HashEqual("pets:" + id, "petsAvailability", "Yes"));
+                HashEntry[] petFormat = { new HashEntry("petname", petname), new HashEntry("petstype", petstype), new HashEntry("petsAvailability", "No"), new HashEntry("Shelter", "New Owner: " + LoggedUser) };
+                tran.HashSetAsync("pets:" + id, petFormat);
+                bool committed = tran.Execute();
+                if (committed) Console.WriteLine("Pet was taken successfully.");
+                else Console.WriteLine("Something went wrong.");
+            }
+            else Console.WriteLine("You are not logged in.");
 
         }
 
         public void ListShelters()
         {
+            if (db.StringGet("sheltercount") == "0")
+            {
+                Console.WriteLine("There are currently no shelters listed.");
+                return;
+            }
             string count = db.StringGet("sheltercount");
 
             for (int i = 1; i <= int.Parse(count); i++)
@@ -231,18 +254,22 @@ namespace RedisProj
 
         public void AddShelter()
         {
-            Console.WriteLine("Enter your shelters name.");
-            string sheltername = Console.ReadLine();
+            if (LoggedUser != null)
+            {
+                Console.WriteLine("Enter your shelters name.");
+                string sheltername = Console.ReadLine();
 
-            db.StringIncrement("sheltercount");
-            string count = db.StringGet("sheltercount");
-            var tran = db.CreateTransaction();
-            tran.AddCondition(Condition.HashNotExists("shelters:" + count, "sheltername"));
-            HashEntry[] shelterFormat = { new HashEntry("sheltername", sheltername) };
-            tran.HashSetAsync("shelters:" + count, shelterFormat);
-            bool committed = tran.Execute();
-            if (committed) Console.WriteLine("Shelter was added successfully.");
-            else Console.WriteLine("This shelter was already added previously.");
+                db.StringIncrement("sheltercount");
+                string count = db.StringGet("sheltercount");
+                var tran = db.CreateTransaction();
+                tran.AddCondition(Condition.HashNotExists("shelters:" + count, "sheltername"));
+                HashEntry[] shelterFormat = { new HashEntry("sheltername", sheltername) };
+                tran.HashSetAsync("shelters:" + count, shelterFormat);
+                bool committed = tran.Execute();
+                if (committed) Console.WriteLine("Shelter was added successfully.");
+                else Console.WriteLine("This shelter was already added previously.");
+            }
+            else Console.WriteLine("You are not logged in.");
         }
 
 
